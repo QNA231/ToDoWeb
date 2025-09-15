@@ -2,9 +2,30 @@ import { json } from 'express';
 import Task from '../models/Task.js';
 
 export const getAllTask = async (req, res) => {
+    const { filter = 'today' } = req.query;
+    const now = new Date();
+    let startDate;
+    switch (filter) {
+        case 'today':
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // ngày hiện tại lúc 00:00
+            break;
+        case 'week':
+            const monday = now.getDate() - (now.getDay() - 1) - (now.getDay() === 0 ? 7 : 0);
+            startDate = new Date(now.getFullYear(), now.getMonth(), monday);
+            break;
+        case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+        case 'all':
+        default:
+            startDate = null;
+    };
+
+    const query = startDate ? { createdAt: { $gte: startDate } } : {};
+
     try {
-        // const tasks = await Task.find().sort({ createdAt: "desc" });
         const result = await Task.aggregate([
+            { $match: query },
             {
                 $facet: {
                     tasks: [{ $sort: { createdAt: -1 } }],
